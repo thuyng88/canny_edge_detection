@@ -51,6 +51,10 @@ parameter			dThresLow = 10;
 
 // Internal Signal;
 reg 		[31:0]		tpSum;
+integer tempX;
+integer	tempY;
+integer tempGx;
+integer	tempGy;
 reg		[1:0]		IntSignal;
 reg signed 	[31:0] 		Gx, Gy, fGx, fGy;
 reg signed	[1:0]		dx, dy;
@@ -58,8 +62,8 @@ reg signed	[1:0]		dx, dy;
 //Gausian
 integer i,k,j,l;
 //Sobel
-reg 	[`DATA_WIDTH-1:0]	sobelx[0:8];
-reg 	[`DATA_WIDTH-1:0]	sobely[0:8];
+integer sobelx[0:8];
+integer sobely[0:8];
 
 always @(clk or rst_b)
 begin
@@ -115,7 +119,7 @@ begin
         // ...
         // ...
 
-		$display("Load Data from InData to Reg => Mode:%d, data: %d\n",dWriteReg, regX[dAddrRegRow*5+dAddrRegCol]);	
+	//	$display("Load Data from InData to Reg => Mode:%d, data: %d\n",dWriteReg, regX[dAddrRegRow*5+dAddrRegCol]);	
 	end
 
 	// Read Data from Canny Edge Detector
@@ -130,6 +134,7 @@ begin
             OutData <= Out_direction; 
         else if (dReadReg == `REG_NMS)
             OutData <= Out_nms;
+	//	OutData <= regX[dAddrRegRow*5+dAddrRegCol];
         else if (dReadReg == `REG_HYSTERESIS)
             OutData <= Out_bThres;
         else OutData <= 'hz;
@@ -138,7 +143,7 @@ begin
         // ...
         // ...
 
-		$display("Read Data from Register or Array to OutData => Mode:%d\n", dReadReg);
+//		$display("Read Data from Register or Array to OutData => Mode:%d\n", dReadReg);
 	end
 
 	else
@@ -164,7 +169,7 @@ begin
 			end
 			else if(IntSignal == 2'b01) begin
                  Out_gf <= tpSum/128;
-                 $display("Out Data from Register Gausse Filter => %d\n", Out_gf);
+  //               $display("Out Data from Register Gausse Filter => %d\n", Out_gf);
                  IntSignal <= 2'b10;
                 // Insert Your Code here //
                 // ...
@@ -186,16 +191,18 @@ begin
                 // ...
                 // ...
                 // ...
-                Gx =0;
-                Gy =0;
-                for (i =0; i< 5 ; i = i+1) 
-                    for  (j =0; j< 5 ; j = j+1) begin
-                         Gx = Gx+regX[i*5+j]*sobelx[i*5+j];
-                         $display("In Data from Register Sobel => %d\n", regX[i*5+j]);
-                         Gy = Gy+regX[i*5+j]*sobely[i*5+j];
+				// Thuy
+                tempX =0;
+                tempY =0;
+       // 	
+                for (i =0; i< 3 ; i = i+1) 
+        		for  (j =0; j< 3 ; j = j+1) begin 
+                         tempX = tempX+regX[i*5+j]*sobelx[i*3+j];
+                         tempY = tempY+regX[i*5+j]*sobely[i*3+j];
                     end
-				//Gx <= ;
-				//Gy <= ;
+				Gx <= tempX;
+				Gy <= tempY;
+				//thuy
 				IntSignal <= 2'b01;
 			end
 			else if(IntSignal == 2'b01) begin
@@ -206,11 +213,10 @@ begin
                 // ...
                 // ...
                 // ...
-				if (Gx[31]==1) Gx=-Gx;
-				if (Gy[31]==1) Gy=-Gy;
-                Out_gradient = (Gx + Gy) >> 3;
-                $display("Out Data from Register Sobel => %d\n", Out_gradient);
-				IntSignal = 2'b10;
+				if (Gx[31] == 1) tempGx =-Gx; else tempGx = Gx;
+				if (Gy[31] == 1 ) tempGy =-Gy; else tempGy = Gy;
+                		Out_gradient <= (tempGx + tempGy) >> 3;
+				IntSignal <= 2'b10;
 			end	
 			else if(IntSignal == 2'b10) begin
 			// Direction (Theta)
@@ -234,9 +240,12 @@ begin
                 // ...
                 // ...
                 // ...
+					// Thuy
                     if (fGy <= 0.4*fGx) Out_direction <= 0;
                     else if (fGy > 0.4*fGx && fGy <= 2.4*fGx) Out_direction <= 45; 
-                    else if (Gy > 0.4*fGx && fGy > 2.4*fGx) Out_direction <= 90;
+                    else 
+			    //if (fGy > 2.4*fGx) 
+			    Out_direction <= 90;
 				    end
 				else // if(fGx<0)
 				begin
@@ -246,10 +255,12 @@ begin
                 // ...
                     if (fGy <= -0.4*fGx) Out_direction <= 0;
                     else if (fGy > -0.4*fGx && fGy <= -2.4*fGx) Out_direction <= 135; 
-                    else if (Gy > -0.4*fGx && fGy > -2.4*fGx) Out_direction <= 90;
+                    else 
+			    //if (fGy > -2.4*fGx) 
+			    Out_direction <= 90;
 				    end
                 
-				$display("Out Data Direction => %d\n", Out_direction);
+			//	$display("Out Data Direction => %d\n", Out_direction);
 				IntSignal <= IntSignal;
 			end
 		end
@@ -276,16 +287,16 @@ begin
                     else if (regY[6] == 90) 
                         begin 
                             dx<=0;
-                            dy<=1;
+                            dy<=-1;
                         end    
                     else if (regY[6] == 45) 
                         begin 
-                            dx<=-1;
-                            dy<=1;
+                            dx<=1;
+                            dy<=-1;
                         end
 					else if (regY[6] ==135) begin
-						dx <=1;
-						dy<=1;
+						dx <=-1;
+						dy<=-1;
 					end	
 
 
@@ -299,16 +310,16 @@ begin
                 // ...
                 // ...
 				//integer i;
-				if (regX[6] >= regX[6+dx+(5*dy)] && regX[6] >= regX[6-dx-5*dy]) begin 
+				if (regX[6] >= regX[6+dx+(5*dy)] &&  regX[6] >= regX[6-dx-5*dy]) begin 
 						regX[6+dx+(5*dy)] <=0;
 						regX[6-dx-(5*dy)] <=0;
+				//	Out_nms <= regX[4];
+					Out_nms <= regX[dAddrRegRow*5+dAddrRegCol];
 					end
-				else if (regX[6] < regX[6+dx+(5*dy)] && regX[6] < regX[6-dx-(5*dy)]) regX[6] <=0;
-				else regX[6] <=regX[6];
-				
-				Out_nms <=regX[6];
-				$display("Out Data NMS => %d\n", Out_nms);
-				IntSignal <= IntSignal;
+				else //regX[6] =0;
+					Out_nms <= 0 ; //regX[dAddrRegRow*5+dAddrRegCol];
+		//		$display("Out Data NMS => %d\n", Out_nms);
+				IntSignal = 2'b00;
 			end
 		end
 		else if(OPMode == `MODE_HYSTERESIS)
@@ -338,12 +349,12 @@ begin
                         end    
                     else if (regY[6] == 45) 
                         begin 
-                            dx<=1;
-                            dy<=1;
+                            dx<=-1;
+                            dy<=-1;
                         end
 					else if (regY[6] ==135) begin
-						dx <=-1;
-						dy<=1;
+						dx <=1;
+						dy<=-1;
 					end	
 				IntSignal <= 2'b01;
 			end	
