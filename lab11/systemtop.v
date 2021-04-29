@@ -50,13 +50,13 @@ wire         Breq_Canny;
 assign Breqn = {Breq_Canny, Breq, Breq_UART, Breq_RAM};
 assign Bgnt = Bgntn[2];
 
-SRAM       SRAM_01(InData, OutData, Address, bCE, bWE);
+SRAM       SRAM_01(.InData(InData), .OutData(OutData), .Address(Address), .bCE(bCE), .bWE(bWE));
 WRAP_SRAM  WRAP_SRAM_01(DataBus, AddressBus, ControlBus, InData, OutData, Address, bCE, bWE, Breq_RAM, Bgntn[0], clk, bReset);
 
 UART_XMTR  UART_XMTR_01(Serial_out, DataToUART, Load_XMT_datareg, Byte_ready, T_byte, clk, bReset);
 WRAP_UART  WRAP_UART_01(DataBus, AddressBus, ControlBus, DataToUART, Load_XMT_datareg, Byte_ready, T_byte, Breq_UART, Bgntn[1], clk, bReset);
 
-CannyEdge  CannyEdge_01(AddrRegRow, AddrRegCol,	Canny_bWE, Canny_bCE, DataToCanny, DataFromCanny,OPMode, bOPEnable, dReadReg, dWriteReg,	clk, bReset);
+CannyEdge  CannyEdge_01(.dAddrRegRow(AddrRegRow), .dAddrRegCol(AddrRegCol),	.bWE(Canny_bWE), .bCE(Canny_bCE), .InData(DataToCanny), .OutData(DataFromCanny), .OPMode(OPMode), .bOPEnable(bOPEnable), .dReadReg(dReadReg), .dWriteReg(dWriteReg),	.clk(clk), .rst_b(bReset));
 WRAP_CANNY WRAP_CANNY_01(DataBus, AddressBus, ControlBus, AddrRegRow, AddrRegCol, Canny_bWE, Canny_bCE, DataToCanny, DataFromCanny, OPMode, bOPEnable, dReadReg, dWriteReg, Breq_Canny, Bgntn[3], clk, bReset);
 
 Arbiter    Arbiter_01(Breqn, Bgntn);
